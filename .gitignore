@@ -1,0 +1,13 @@
+# Local Bot Data Sources
+Data/
+Commands/
+host/
+
+src/main/kotlin/com/ludicrous245/api/command/basic/commands/Test.kt
+
+# IntelliJ IDEA
+.idea/
+
+# Gradle
+.gradle
+build/
