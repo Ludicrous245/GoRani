@@ -1,0 +1,2 @@
+# GoRani
+Discord Music Bot
