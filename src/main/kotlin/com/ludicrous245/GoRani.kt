@@ -11,7 +11,6 @@ import com.ludicrous245.core.data.variables.Config
 import com.ludicrous245.core.audio.EmojiHandler
 import com.ludicrous245.core.command.loader.CommandFileDescription
 import com.ludicrous245.core.data.variables.HL4Data
-import com.ludicrous245.core.io.Console
 import dev.kord.common.entity.ActivityType
 import dev.kord.common.entity.DiscordBotActivity
 import dev.kord.common.entity.PresenceStatus
@@ -19,6 +18,7 @@ import dev.kord.core.Kord
 import dev.kord.core.entity.ReactionEmoji
 import dev.kord.core.event.message.MessageCreateEvent
 import dev.kord.core.event.message.MessageDeleteEvent
+import dev.kord.core.event.message.MessageUpdateEvent
 import dev.kord.core.event.message.ReactionAddEvent
 import dev.kord.core.on
 import dev.kord.gateway.*
@@ -80,27 +80,12 @@ suspend fun main(){
     reactions.add(ReactionEmoji.Unicode("5️⃣"))
     reactions.add(ReactionEmoji.Unicode("❎"))
 
+    println("Try to Connect")
+
     val lavalink = client.lavakord()
+
     lavalink.addNode(Url.invoke("ws://localhost:2333"), Config.password)
-
-    Console.printPreDebugMessage(lavalink.nodes)
-
-    Console.printPreDebugMessage(lavalink)
-
     HL4Data.lavalink = lavalink
-
-    client.on<MessageCreateEvent> {
-
-        if(message.content.startsWith(Config.prefix)){
-
-            for(cm in CommandStore.commandModules){
-                cm.onMessageCreate(message)
-            }
-
-            CommandHandler(message).handle()
-        }
-
-    }
 
     client.on<ReactionAddEvent> {
 
@@ -109,12 +94,30 @@ suspend fun main(){
         }
     }
 
+    client.on<MessageUpdateEvent>{
+
+        for (cm in CommandStore.commandModules) {
+            cm.onMessageEdit(message.asMessage())
+        }
+    }
+
     client.on<MessageDeleteEvent>{
 
-        if(message != null) {
-            for (cm in CommandStore.commandModules) {
-                cm.onMessageDelete(message!!)
-            }
+        for (cm in CommandStore.commandModules) {
+            cm.onMessageDelete(messageId, guild)
+        }
+
+    }
+
+    client.on<MessageCreateEvent> {
+
+        for(cm in CommandStore.commandModules){
+            cm.onMessageCreate(message)
+        }
+
+        if(message.content.startsWith(Config.prefix)){
+
+            CommandHandler(message).handle()
         }
 
     }

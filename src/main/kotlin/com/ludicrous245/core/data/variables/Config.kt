@@ -3,7 +3,7 @@ package com.ludicrous245.core.data.variables
 import dev.kord.core.Kord
 
 object Config {
-    const val version = "v0.41"
+    const val version = "v0.42"
 
     var isDebug = true
     var isLoading = true
