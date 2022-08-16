@@ -23,10 +23,14 @@ object GoraniST {
 
     suspend fun onCreate(message: Message){
         println("key created ${message.id}")
+        if(messagePairKey.size > 3000){
+            messagePairKey.clear()
+            println("로그 클리어")
+        }
+
         messagePairKey[message.id] = Pair(message.author!!.tag, message.content)
 
         val history = searchHistory(message.id)
-
         history.onCreate(message)
     }
 

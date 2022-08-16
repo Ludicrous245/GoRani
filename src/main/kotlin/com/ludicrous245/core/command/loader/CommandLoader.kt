@@ -4,12 +4,13 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 class CommandLoader {
-    private val classes: MutableMap<String, Class<*>?> = ConcurrentHashMap()
+    val classes: MutableMap<String, Class<*>?> = ConcurrentHashMap()
 
-    private val classLoaders: MutableMap<File, CommandClassLoader> = ConcurrentHashMap()
+    val classLoaders: MutableMap<File, CommandClassLoader> = ConcurrentHashMap()
 
     @Throws(Throwable::class)
     internal fun load(file: File, description: CommandFileDescription){
+        println("민자")
         require(file !in classLoaders) { "Already registered file ${file.name}" }
 
         val classLoader = CommandClassLoader(this, file, javaClass.classLoader)

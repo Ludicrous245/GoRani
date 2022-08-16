@@ -3,11 +3,16 @@ package com.ludicrous245.api.command.basic
 import com.ludicrous245.api.command.CommandModule
 import com.ludicrous245.api.command.basic.commands.*
 import dev.kord.common.entity.Snowflake
+import dev.kord.core.Kord
 import dev.kord.core.behavior.GuildBehavior
 import dev.kord.core.entity.Message
+import dev.kord.core.event.message.MessageCreateEvent
+import dev.kord.core.event.message.MessageDeleteEvent
+import dev.kord.core.event.message.MessageUpdateEvent
+import dev.kord.core.on
 
 
-class BasicCommand : CommandModule() {
+class BasicCommand(override val client: Kord) : CommandModule(client) {
     override fun onLoad() {
         registerCommand(Test())
         registerCommand(Play())
@@ -25,23 +30,26 @@ class BasicCommand : CommandModule() {
         registerCommand(Enko())
         registerCommand(Reconnect())
         registerCommand(Restore())
+
     }
 
     override fun onUnload() {
 
     }
 
-    override suspend fun onMessageCreate(message: Message) {
-        if(!message.author!!.isBot){
-            GoraniST.onCreate(message)
+    override suspend fun eventLoader() {
+        client.on<MessageCreateEvent> {
+            if(!message.author!!.isBot){
+                GoraniST.onCreate(message)
+            }
         }
-    }
 
-    override suspend fun onMessageDelete(snowflake: Snowflake, guild: GuildBehavior?) {
-        GoraniST.onDelete(snowflake, guild!!.asGuild())
-    }
+        client.on<MessageDeleteEvent> {
+            GoraniST.onDelete(messageId, guild!!.asGuild())
+        }
 
-    override suspend fun onMessageEdit(message: Message){
-        GoraniST.onUpdate(message)
+        client.on<MessageUpdateEvent> {
+            GoraniST.onUpdate(message.asMessage())
+        }
     }
 }

@@ -184,7 +184,7 @@ class TrackPlayer(private val lavalink: Link, private val guild: HL4Guild){
 
         val music = queue.poll()
 
-        if(!guild.isLoop) {
+        if(!music.isCloned) {
             sendPlayMessage(music, "재생중")
         }
 

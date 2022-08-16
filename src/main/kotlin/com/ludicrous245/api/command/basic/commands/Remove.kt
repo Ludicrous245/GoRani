@@ -23,7 +23,7 @@ class Remove : Command("대기열에 있는 노래를 지웁니다.", CommandSid
         }
 
         if(guild.queue.getSize() > index) {
-            val track = guild.queue.removeAt(index)
+            val track = guild.queue.removeAt(index-1)
 
             val embed = EmbedWrapper()
             embed.setTitle("음악 제거")

@@ -11,6 +11,7 @@ abstract class HL4Music{
     abstract val url:String
 
     abstract val audioTrack:Track
+    abstract val isCloned:Boolean
 
     @OptIn(ExperimentalTime::class)
     fun clone(): HL4Music {
@@ -40,6 +41,9 @@ abstract class HL4Music{
 
             override val audioTrack: Track
                 get() = clonedAudioTrack
+
+            override val isCloned: Boolean
+                get() = true
         }
 
     }

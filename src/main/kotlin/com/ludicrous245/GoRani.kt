@@ -2,15 +2,18 @@ package com.ludicrous245
 
 import com.google.gson.JsonObject
 import com.ludicrous245.api.command.basic.BasicCommand
-import com.ludicrous245.core.data.file.FileParser
+import com.ludicrous245.core.audio.EmojiHandler
 import com.ludicrous245.core.command.CommandHandler
 import com.ludicrous245.core.command.CommandStore
-import com.ludicrous245.core.data.DataManager
-import com.ludicrous245.core.data.file.FileManager
-import com.ludicrous245.core.data.variables.Config
-import com.ludicrous245.core.audio.EmojiHandler
 import com.ludicrous245.core.command.loader.CommandFileDescription
+import com.ludicrous245.core.command.loader.CommandLoader
+import com.ludicrous245.core.data.DataManager
+import com.ludicrous245.core.data.complete
+import com.ludicrous245.core.data.file.FileManager
+import com.ludicrous245.core.data.file.FileParser
+import com.ludicrous245.core.data.variables.Config
 import com.ludicrous245.core.data.variables.HL4Data
+import com.ludicrous245.core.io.Console
 import dev.kord.common.entity.ActivityType
 import dev.kord.common.entity.DiscordBotActivity
 import dev.kord.common.entity.PresenceStatus
@@ -21,22 +24,40 @@ import dev.kord.core.event.message.MessageDeleteEvent
 import dev.kord.core.event.message.MessageUpdateEvent
 import dev.kord.core.event.message.ReactionAddEvent
 import dev.kord.core.on
-import dev.kord.gateway.*
+import dev.kord.gateway.DiscordPresence
+import dev.kord.gateway.Intent
+import dev.kord.gateway.MessageReactionAdd
+import dev.kord.gateway.PrivilegedIntent
 import dev.schlaubi.lavakord.kord.lavakord
 import io.ktor.http.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.apache.commons.logging.Log
 import java.io.File
+import java.nio.charset.StandardCharsets
+import java.util.jar.JarFile
+import kotlin.collections.ArrayList
 import kotlin.system.exitProcess
+
+/**
+ * Init And Boot
+ */
+
+private val commandLoader = CommandLoader()
+private var location = 1
 
 @OptIn(PrivilegedIntent::class)
 suspend fun main(){
+    //startInit
+    println("Start Initializer")
+
+    loadCommands()
+
+    println(commandLoader.classes)
+
     dataFolderInit()
 
-    CommandStore.commandModules.add(BasicCommand())
-
-    for(cm in CommandStore.commandModules){
-        cm.onLoad()
-    }
-
+    //Load Info
     val config = FileParser.readFileAsJSON("./Data/System/system.json")!!
     val configInfo = config.get("config") as JsonObject
 
@@ -50,6 +71,8 @@ suspend fun main(){
         exitProcess(0)
     }
 
+    //Store Info
+
     Config.token = configInfo["token"].asString
     Config.ytToken = configInfo["yt-token"].asString
     Config.password = configInfo["password"].asString
@@ -57,6 +80,25 @@ suspend fun main(){
     Config.owner = configInfo["ownerID"].asString
     Config.isDebug = configInfo["isDebug"].asBoolean
 
+    sendLoadMessage("Loaded Bot Default Info")
+
+    Config.client = Kord(Config.token)
+
+    val client = Config.client
+
+    sendLoadMessage("Create Client")
+
+    //DefaultCommandModule
+    CommandStore.commandModules.add(BasicCommand(client))
+
+    //CommandModuleLoad
+    for(cm in CommandStore.commandModules){
+        cm.onLoad()
+    }
+
+    sendLoadMessage("Register Commands")
+
+    //OnDisable
     Runtime.getRuntime().addShutdownHook(object:Thread(){
         override fun run() {
 
@@ -67,9 +109,9 @@ suspend fun main(){
         }
     })
 
-    Config.client = Kord(Config.token)
+    sendLoadMessage("Set Shutdown Hook")
 
-    val client = Config.client
+    //Init Reactions
 
     val reactions = HL4Data.reactions
 
@@ -80,12 +122,23 @@ suspend fun main(){
     reactions.add(ReactionEmoji.Unicode("5️⃣"))
     reactions.add(ReactionEmoji.Unicode("❎"))
 
-    println("Try to Connect")
+    sendLoadMessage("Init Bot Reactions")
+
+    //lavakord
 
     val lavalink = client.lavakord()
 
     lavalink.addNode(Url.invoke("ws://localhost:2333"), Config.password)
     HL4Data.lavalink = lavalink
+
+
+    sendLoadMessage("Connect lavakord")
+
+    //default require vents
+
+    for(cm in CommandStore.commandModules){
+        cm.eventLoader()
+    }
 
     client.on<ReactionAddEvent> {
 
@@ -94,26 +147,7 @@ suspend fun main(){
         }
     }
 
-    client.on<MessageUpdateEvent>{
-
-        for (cm in CommandStore.commandModules) {
-            cm.onMessageEdit(message.asMessage())
-        }
-    }
-
-    client.on<MessageDeleteEvent>{
-
-        for (cm in CommandStore.commandModules) {
-            cm.onMessageDelete(messageId, guild)
-        }
-
-    }
-
     client.on<MessageCreateEvent> {
-
-        for(cm in CommandStore.commandModules){
-            cm.onMessageCreate(message)
-        }
 
         if(message.content.startsWith(Config.prefix)){
 
@@ -122,7 +156,15 @@ suspend fun main(){
 
     }
 
+    sendLoadMessage("Register Events")
+
+    //finishInit and boot
+
+    sendLoadMessage("Wrap up Initializing Process...")
     Config.isLoading = false
+
+
+    sendLoadMessage("Going to boot Hold on!")
 
     client.login(){
         presence = DiscordPresence(PresenceStatus.Idle, false, null, DiscordBotActivity("(${Config.version})베타 테스트중", ActivityType.Game))
@@ -132,14 +174,71 @@ suspend fun main(){
 
 }
 
-internal fun loadCommandModules(){
-    val descriptions = loadCommandDescriptions()
+/**
+ * CommandModuleLoad
+ */
 
+suspend fun loadCommands(){
+    val descriptions = loadCommandModuleDescription()
+
+    for((file, description) in descriptions){
+        commandLoader.load(file, description)
+    }
 }
 
-fun loadCommandDescriptions(): List<Pair<File, CommandFileDescription>>{
-    return ArrayList()
+internal fun loadCommandFiles(): Array<File>{
+    val commandFolder = File("./Commands")
+
+    commandFolder.mkdirs()
+    return commandFolder.listFiles { file -> !file.isDirectory && file.name.endsWith(".jar") }
+        ?: return emptyArray()
 }
+
+
+internal suspend fun loadCommandModuleDescription(): List<Pair<File, CommandFileDescription>>{
+    val arrayList = ArrayList<Pair<File, CommandFileDescription>>()
+
+    val abilityFiles = loadCommandFiles()
+
+    for(file in abilityFiles){
+        arrayList.add(Pair(file, file.getCommandDescription()))
+    }
+
+    return arrayList
+}
+
+private suspend fun File.getCommandDescription(): CommandFileDescription {
+    val commandFile = this
+    val desc = JsonObject()
+
+    withContext(Dispatchers.IO) {
+        JarFile(commandFile).use { jar ->
+            jar.getJarEntry("Module.json")?.let { entry ->
+                jar.getInputStream(entry).bufferedReader(StandardCharsets.UTF_8).use { reader ->
+                    val context = reader.readLines()
+                        .complete()
+                        .removePrefix("{")
+                        .removeSuffix("}")
+                        .replace(" ", "")
+                        .replace("\"", "")
+                        .split(",")
+
+                    for(t in context){
+                        val prop = t.split(":")
+
+                        desc.addProperty(prop[0], prop[1])
+                    }
+                }
+            }
+        }
+    }
+
+    return CommandFileDescription(desc)
+}
+
+/**
+ * DataFolder
+ */
 
 fun dataFolderInit(){
     DataManager.createJsonDB("info")
@@ -161,4 +260,9 @@ fun dataFolderInit(){
 
         DataManager.addJsonData("system", "System","config", systemObject)
     }
+}
+
+fun sendLoadMessage(string: String){
+    println("[$location] $string")
+    location ++
 }

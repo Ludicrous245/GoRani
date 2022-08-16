@@ -2,7 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     application
-    kotlin("jvm") version "1.5.10"
+    kotlin("jvm") version "1.6.21"
     id("com.github.johnrengelman.shadow") version "7.1.2"
     id("idea")
 
@@ -24,11 +24,11 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
-    implementation("dev.kord:kord-core:0.8.0-M14")
-    implementation("dev.kord:kord-voice:0.8.0-M14")
+    implementation("dev.kord:kord-core:0.8.0-M15")
+    implementation("dev.kord:kord-voice:0.8.0-M15")
     implementation("com.github.kimcore:inko.kt:1.1")
     implementation("im.kimcore:Josa.kt:1.6")
-    implementation("dev.schlaubi.lavakord:kord-jvm:3.6.2")
+    implementation("dev.schlaubi.lavakord:kord-jvm:3.6.3")
     implementation("com.google.http-client:google-http-client-jackson2:1.41.8")
     implementation("com.google.apis:google-api-services-youtube:v3-rev20220418-1.32.1")
 

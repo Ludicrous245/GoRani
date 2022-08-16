@@ -10,5 +10,4 @@ object CommandStore {
     val commands: HashMap<String, Command> = HashMap()
     val children: HashMap<String, Command> = HashMap()
 
-
 }

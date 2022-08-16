@@ -90,6 +90,9 @@ suspend fun TrackResponse.PartialTrack.translate(user: HL4User): HL4Music {
 
         override val audioTrack: Track
             get() = track
+
+        override val isCloned: Boolean
+            get() = false
     }
 }
 
